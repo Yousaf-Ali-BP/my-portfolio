@@ -26,19 +26,23 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Swipe support for the carousel
   function setupSwipeFunctionality(carouselElement, carousel) {
-    let touchStartX = 0;
-    let touchEndX = 0;
-    const swipeThreshold = 40;
+    let touchStartX = 0, touchStartY = 0;
+    let touchEndX = 0, touchEndY = 0;
+    const swipeThreshold = 40; // Minimum swipe distance
 
     carouselElement.addEventListener("touchstart", (event) => {
       touchStartX = event.touches[0].clientX;
+      touchStartY = event.touches[0].clientY;
     });
 
     carouselElement.addEventListener("touchend", (event) => {
       touchEndX = event.changedTouches[0].clientX;
-      const deltaX = touchStartX - touchEndX;
+      touchEndY = event.changedTouches[0].clientY;
 
-      if (Math.abs(deltaX) > swipeThreshold) {
+      const deltaX = touchStartX - touchEndX;
+      const deltaY = touchStartY - touchEndY;
+
+      if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > swipeThreshold) {
         deltaX > 0 ? carousel.next() : carousel.prev();
       }
     });
@@ -55,7 +59,6 @@ document.addEventListener("DOMContentLoaded", function () {
       const activeLink = document.querySelector(`.nav-link[href="#${activePageId}"]`);
       if (activeLink) activeLink.classList.add("active");
 
-      // Ensure next page always starts at the top
       setTimeout(() => {
         window.scrollTo({ top: 0, behavior: "smooth" });
       }, 50);
@@ -70,10 +73,7 @@ document.addEventListener("DOMContentLoaded", function () {
         const targetId = this.getAttribute("href").substring(1);
         const targetItem = document.getElementById(targetId);
         if (targetItem) {
-          let carousel = bootstrap.Carousel.getInstance(carouselElement);
-          if (!carousel) {
-            carousel = new bootstrap.Carousel(carouselElement);
-          }
+          const carousel = bootstrap.Carousel.getInstance(carouselElement);
           const index = [...carouselElement.querySelectorAll(".carousel-item")].indexOf(targetItem);
           carousel.to(index);
 
@@ -84,95 +84,96 @@ document.addEventListener("DOMContentLoaded", function () {
       });
     });
   }
-
-  // Form validation setup
+  
+  
   function setupFormValidation() {
-    const forms = document.querySelectorAll(".needs-validation");
-    forms.forEach((form) => {
-      form.addEventListener("submit", (event) => {
-        if (!validateForm(form)) {
-          event.preventDefault();
-          event.stopPropagation();
-        }
-        form.classList.add("was-validated");
-      });
+  const form = document.getElementById("submit-form");
+  if (!form) return;
 
-      form.querySelectorAll("input, textarea").forEach((input) => {
-        input.addEventListener("input", () => validateField(input));
-      });
-    });
-  }
-
-  // Validate form fields dynamically
-  function validateField(input) {
-    const isEmail = input.id === "Email";
-    const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-    const isValid = isEmail ? emailPattern.test(input.value.trim()) : input.value.trim() !== "";
-
-    input.classList.toggle("is-valid", isValid);
-    input.classList.toggle("is-invalid", !isValid);
-  }
-
-  // Validate form before submission
-  function validateForm(form) {
-    let isValid = true;
-
-    form.querySelectorAll("input[required], textarea[required]").forEach((field) => {
-      if (field.value.trim() === "") {
-        field.classList.add("is-invalid");
-        isValid = false;
-      } else {
-        field.classList.remove("is-invalid");
-      }
-    });
-
-    // Validate Email Format
-    const emailInput = form.querySelector("#Email");
-    if (emailInput) {
-      const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-      if (!emailPattern.test(emailInput.value.trim())) {
-        emailInput.classList.add("is-invalid");
-        isValid = false;
-      } else {
-        emailInput.classList.remove("is-invalid");
-      }
-    }
-
-    if (!isValid) {
-      form.reportValidity();
-    }
-
-    return isValid;
-  }
-
-  // Handle form submission to Google Apps Script
-  function setupFormSubmission() {
-    const formSubmit = document.getElementById("submit-form");
-    if (!formSubmit) return;
-
-    formSubmit.addEventListener("submit", function (event) {
+  form.addEventListener("submit", (event) => {
+    if (!validateForm(form)) {
       event.preventDefault();
-      if (!validateForm(this)) return;
+      event.stopPropagation();
+      form.classList.add("was-validated");
+    }
+  });
 
-      const formData = new FormData(this);
-      const url = "https://script.google.com/macros/s/AKfycbwt9ETKgsBJhTcKq1-fTTbAtcXWYbC4OT7mUZrT-zi9Ezgcn_rGeLTRVZu23Y_-vOriew/exec";
+  // Validate dynamically while typing
+  form.querySelectorAll("input, textarea").forEach((input) => {
+    input.addEventListener("input", () => validateField(input));
+  });
+}
 
-      fetch(url, { method: "POST", body: formData })
-        .then((response) => {
-          if (response.ok) {
-            alert("Form submitted successfully!");
-            window.location.reload();
-          } else {
-            throw new Error("Form submission failed.");
-          }
-        })
-        .catch(() => alert("Something went wrong. Please try again."));
-    });
-  }
+// ✅ Validate a single field
+function validateField(input) {
+  const value = input.value.trim();
+  const isEmail = input.id.toLowerCase() === "email"; 
+  const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
+  let isValid = value.length > 0; // Not empty
+  if (isEmail) isValid = emailPattern.test(value); // Email check
+
+  input.classList.toggle("is-valid", isValid);
+  input.classList.toggle("is-invalid", !isValid);
+
+  return isValid;
+}
+
+// ✅ Validate the entire form before submission
+function validateForm(form) {
+  let isValid = true;
+  form.querySelectorAll("input[required], textarea[required]").forEach((field) => {
+    if (!validateField(field)) isValid = false;
+  });
+  return isValid;
+}
+
+function setupFormSubmission() {
+  const form = document.getElementById("submit-form");
+  if (!form) return;
+
+  form.addEventListener("submit", function (event) {
+    event.preventDefault();
+
+    if (!validateForm(this)) {
+      alert("Please fill out all required fields correctly.");
+      return;
+    }
+
+    const formData = new FormData(this);
+    const url = "https://script.google.com/macros/s/AKfycbwt9ETKgsBJhTcKq1-fTTbAtcXWYbC4OT7mUZrT-zi9Ezgcn_rGeLTRVZu23Y_-vOriew/exec"; 
+
+    fetch(url, {
+      method: "POST",
+      body: formData,
+    })
+      .then((response) => {
+        if (response.ok) {
+          alert("Form submitted successfully!");
+          resetForm(form);
+        } else {
+          throw new Error("Form submission failed.");
+        }
+      })
+      .catch(() => alert("Something went wrong. Please try again."));
+  });
+}
+
+// ✅ Reset form fields and validation states
+function resetForm(form) {
+  form.reset();
+  form.classList.remove("was-validated");
+
+  form.querySelectorAll(".is-valid, .is-invalid").forEach((el) => {
+    el.classList.remove("is-valid", "is-invalid");
+  });
+}
+
 
   // Initialize all functionalities
   function initializeApp() {
     initializeCarousel();
+    setupCarouselNavSync();
     setupFormValidation();
     setupFormSubmission();
   }
