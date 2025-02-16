@@ -24,11 +24,11 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
-  // Swipe support for the carousel
+  // Swipe support for carousel
   function setupSwipeFunctionality(carouselElement, carousel) {
     let touchStartX = 0, touchStartY = 0;
     let touchEndX = 0, touchEndY = 0;
-    const swipeThreshold = 40; // Minimum swipe distance
+    const swipeThreshold = 40; 
 
     carouselElement.addEventListener("touchstart", (event) => {
       touchStartX = event.touches[0].clientX;
@@ -84,96 +84,101 @@ document.addEventListener("DOMContentLoaded", function () {
       });
     });
   }
-  
-  
+
+  // ✅ Setup Form Validation with Live Feedback
   function setupFormValidation() {
-  const form = document.getElementById("submit-form");
-  if (!form) return;
+    const forms = document.querySelectorAll(".needs-validation");
 
-  form.addEventListener("submit", (event) => {
-    if (!validateForm(form)) {
-      event.preventDefault();
-      event.stopPropagation();
-      form.classList.add("was-validated");
-    }
-  });
-
-  // Validate dynamically while typing
-  form.querySelectorAll("input, textarea").forEach((input) => {
-    input.addEventListener("input", () => validateField(input));
-  });
-}
-
-// ✅ Validate a single field
-function validateField(input) {
-  const value = input.value.trim();
-  const isEmail = input.id.toLowerCase() === "email"; 
-  const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-
-  let isValid = value.length > 0; // Not empty
-  if (isEmail) isValid = emailPattern.test(value); // Email check
-
-  input.classList.toggle("is-valid", isValid);
-  input.classList.toggle("is-invalid", !isValid);
-
-  return isValid;
-}
-
-// ✅ Validate the entire form before submission
-function validateForm(form) {
-  let isValid = true;
-  form.querySelectorAll("input[required], textarea[required]").forEach((field) => {
-    if (!validateField(field)) isValid = false;
-  });
-  return isValid;
-}
-
-function setupFormSubmission() {
-  const form = document.getElementById("submit-form");
-  if (!form) return;
-
-  form.addEventListener("submit", function (event) {
-    event.preventDefault();
-
-    if (!validateForm(this)) {
-      alert("Please fill out all required fields correctly.");
-      return;
-    }
-
-    const formData = new FormData(this);
-    const url = "https://script.google.com/macros/s/AKfycbwt9ETKgsBJhTcKq1-fTTbAtcXWYbC4OT7mUZrT-zi9Ezgcn_rGeLTRVZu23Y_-vOriew/exec"; 
-
-    fetch(url, {
-      method: "POST",
-      body: formData,
-    })
-      .then((response) => {
-        if (response.ok) {
-          alert("Form submitted successfully!");
-          resetForm(form);
-        } else {
-          throw new Error("Form submission failed.");
+    forms.forEach((form) => {
+      form.addEventListener("submit", (event) => {
+        if (!validateForm(form)) {
+          event.preventDefault();
+          event.stopPropagation();
         }
-      })
-      .catch(() => alert("Something went wrong. Please try again."));
-  });
-}
+        form.classList.add("was-validated");
+      });
 
-// ✅ Reset form fields and validation states
-function resetForm(form) {
-  form.reset();
-  form.classList.remove("was-validated");
+      // Live validation on input fields
+      form.querySelectorAll("input, textarea").forEach((input) => {
+        input.addEventListener("input", () => validateField(input));
+      });
+    });
+  }
 
-  form.querySelectorAll(".is-valid, .is-invalid").forEach((el) => {
-    el.classList.remove("is-valid", "is-invalid");
-  });
-}
+  function validateField(input) {
+    const isEmail = input.id === "Email";
+    const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    const isValid = isEmail ? emailPattern.test(input.value.trim()) : input.value.trim() !== "";
 
+    input.classList.toggle("is-valid", isValid);
+    input.classList.toggle("is-invalid", !isValid);
+  }
 
-  // Initialize all functionalities
+  function validateForm(form) {
+    let isValid = true;
+
+    form.querySelectorAll("input[required], textarea[required]").forEach((field) => {
+      if (field.value.trim() === "") {
+        field.classList.add("is-invalid");
+        isValid = false;
+      } else {
+        field.classList.remove("is-invalid");
+      }
+    });
+
+    const emailInput = form.querySelector("#Email");
+    if (emailInput) {
+      const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+      if (!emailPattern.test(emailInput.value.trim())) {
+        emailInput.classList.add("is-invalid");
+        isValid = false;
+      } else {
+        emailInput.classList.remove("is-invalid");
+      }
+    }
+
+    if (!isValid) {
+      form.reportValidity();
+    }
+
+    return isValid;
+  }
+
+  // ✅ Handle Form Submission
+  function setupFormSubmission() {
+    const formSubmit = document.getElementById("submit-form");
+    if (!formSubmit) return;
+
+    formSubmit.addEventListener("submit", function (event) {
+      event.preventDefault();
+      if (!validateForm(this)) return;
+
+      const formData = new FormData(this);
+      const url = "https://script.google.com/macros/s/AKfycbwt9ETKgsBJhTcKq1-fTTbAtcXWYbC4OT7mUZrT-zi9Ezgcn_rGeLTRVZu23Y_-vOriew/exec";
+
+      fetch(url, { method: "POST", body: formData })
+        .then((response) => {
+          if (response.ok) {
+            alert("Form submitted successfully!");
+            resetForm(this);
+          } else {
+            throw new Error("Form submission failed.");
+          }
+        })
+        .catch(() => alert("Something went wrong. Please try again."));
+    });
+  }
+
+  function resetForm(form) {
+    form.reset();
+    form.classList.remove("was-validated");
+    form.querySelectorAll(".is-valid, .is-invalid").forEach((input) => {
+      input.classList.remove("is-valid", "is-invalid");
+    });
+  }
+
   function initializeApp() {
     initializeCarousel();
-    setupCarouselNavSync();
     setupFormValidation();
     setupFormSubmission();
   }
