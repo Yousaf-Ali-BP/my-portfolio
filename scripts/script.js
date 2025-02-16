@@ -26,23 +26,19 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Swipe support for the carousel
   function setupSwipeFunctionality(carouselElement, carousel) {
-    let touchStartX = 0, touchStartY = 0;
-    let touchEndX = 0, touchEndY = 0;
-    const swipeThreshold = 40; // Minimum swipe distance
+    let touchStartX = 0;
+    let touchEndX = 0;
+    const swipeThreshold = 40;
 
     carouselElement.addEventListener("touchstart", (event) => {
       touchStartX = event.touches[0].clientX;
-      touchStartY = event.touches[0].clientY;
     });
 
     carouselElement.addEventListener("touchend", (event) => {
       touchEndX = event.changedTouches[0].clientX;
-      touchEndY = event.changedTouches[0].clientY;
-      
       const deltaX = touchStartX - touchEndX;
-      const deltaY = touchStartY - touchEndY;
 
-      if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > swipeThreshold) {
+      if (Math.abs(deltaX) > swipeThreshold) {
         deltaX > 0 ? carousel.next() : carousel.prev();
       }
     });
@@ -52,12 +48,17 @@ document.addEventListener("DOMContentLoaded", function () {
   function setupCarouselNavSync(carouselElement) {
     const navLinks = document.querySelectorAll(".nav-link");
 
-    carouselElement.addEventListener("slide.bs.carousel", (event) => {
+    carouselElement.addEventListener("slid.bs.carousel", (event) => {
       navLinks.forEach((link) => link.classList.remove("active"));
 
       const activePageId = event.relatedTarget.id;
       const activeLink = document.querySelector(`.nav-link[href="#${activePageId}"]`);
       if (activeLink) activeLink.classList.add("active");
+
+      // Ensure next page always starts at the top
+      setTimeout(() => {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }, 50);
     });
 
     navLinks.forEach((link) => {
@@ -69,9 +70,16 @@ document.addEventListener("DOMContentLoaded", function () {
         const targetId = this.getAttribute("href").substring(1);
         const targetItem = document.getElementById(targetId);
         if (targetItem) {
-          const carousel = bootstrap.Carousel.getInstance(carouselElement);
+          let carousel = bootstrap.Carousel.getInstance(carouselElement);
+          if (!carousel) {
+            carousel = new bootstrap.Carousel(carouselElement);
+          }
           const index = [...carouselElement.querySelectorAll(".carousel-item")].indexOf(targetItem);
           carousel.to(index);
+
+          setTimeout(() => {
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }, 50);
         }
       });
     });
@@ -118,13 +126,23 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     });
 
+    // Validate Email Format
     const emailInput = form.querySelector("#Email");
-    if (emailInput && !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(emailInput.value.trim())) {
-      emailInput.classList.add("is-invalid");
-      isValid = false;
+    if (emailInput) {
+      const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+      if (!emailPattern.test(emailInput.value.trim())) {
+        emailInput.classList.add("is-invalid");
+        isValid = false;
+      } else {
+        emailInput.classList.remove("is-invalid");
+      }
     }
 
-    return isValid && form.checkValidity();
+    if (!isValid) {
+      form.reportValidity();
+    }
+
+    return isValid;
   }
 
   // Handle form submission to Google Apps Script
@@ -137,7 +155,7 @@ document.addEventListener("DOMContentLoaded", function () {
       if (!validateForm(this)) return;
 
       const formData = new FormData(this);
-      const url = "https://script.google.com/macros/s/AKfycbwt9ETKgsBJhTcKq1-fTTbAtcXWYbC4OT7mUZrT-zi9Ezgcn_rGeLTRVZu23Y_-vOriew/exec"; // Update URL if needed
+      const url = "https://script.google.com/macros/s/AKfycbwt9ETKgsBJhTcKq1-fTTbAtcXWYbC4OT7mUZrT-zi9Ezgcn_rGeLTRVZu23Y_-vOriew/exec";
 
       fetch(url, { method: "POST", body: formData })
         .then((response) => {
@@ -151,56 +169,10 @@ document.addEventListener("DOMContentLoaded", function () {
         .catch(() => alert("Something went wrong. Please try again."));
     });
   }
-  
-// Synchronize navigation links with carousel slides and ensure smooth scrolling
-function setupCarouselNavSync(carouselElement) {
-  const navLinks = document.querySelectorAll(".nav-link");
-
-  // Listen for slide changes in Bootstrap carousel
-  carouselElement.addEventListener("slid.bs.carousel", (event) => {
-    // Remove 'active' class from all nav links
-    navLinks.forEach((link) => link.classList.remove("active"));
-
-    // Get the new active slide's ID and set the corresponding nav link as active
-    const activePageId = event.relatedTarget.id;
-    const activeLink = document.querySelector(`.nav-link[href="#${activePageId}"]`);
-    if (activeLink) activeLink.classList.add("active");
-
-    // Ensure the next page always starts from the fully top position
-    setTimeout(() => {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }, 50); // Short delay to ensure page transition completes first
-  });
-
-  navLinks.forEach((link) => {
-    link.addEventListener("click", function (e) {
-      e.preventDefault();
-
-      // Remove active class from all links, add it to clicked one
-      navLinks.forEach((link) => link.classList.remove("active"));
-      this.classList.add("active");
-
-      // Get target slide ID from href attribute
-      const targetId = this.getAttribute("href").substring(1);
-      const targetItem = document.getElementById(targetId);
-      if (targetItem) {
-        const carousel = bootstrap.Carousel.getInstance(carouselElement);
-        const index = [...carouselElement.querySelectorAll(".carousel-item")].indexOf(targetItem);
-        carousel.to(index);
-
-        // Ensure next page starts from the fully top position
-        setTimeout(() => {
-          window.scrollTo({ top: 0, behavior: "smooth" });
-        }, 50);
-      }
-    });
-  });
-}
 
   // Initialize all functionalities
   function initializeApp() {
     initializeCarousel();
-    setupCarouselNavSync();
     setupFormValidation();
     setupFormSubmission();
   }
